@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from env.environment import DataCleaningEnv
-
+from baseline.run_baseline import run_baseline
 from tasks.easy_task import EasyTask
 from tasks.medium_task import MediumTask
 from tasks.hard_task import HardTask
@@ -63,3 +63,6 @@ def grade(level: str):
         return {"error": "invalid level"}
 
     return {"score": score} 
+@app.get("/baseline")
+def baseline():
+    return run_baseline()
