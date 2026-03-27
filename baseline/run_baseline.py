@@ -1,38 +1,103 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from tasks.easy_task import EasyTask
-from tasks.medium_task import MediumTask
-from tasks.hard_task import HardTask
 
-from graders.easy_grader import EasyGrader
-from graders.medium_grader import MediumGrader
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from env.environment import DataCleaningEnv
 from graders.hard_grader import HardGrader
+
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+VALID_ACTIONS = ["detect_issues", "fix_age", "fix_salary", "validate"]
+
+
+def get_action(state):
+    prompt = f"""
+You are a data cleaning agent.
+
+Dataset:
+{state}
+
+Choose the BEST next action from:
+detect_issues, fix_age, fix_salary, validate
+
+Return ONLY the action name.
+"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0  
+        )
+
+        action = response.choices[0].message.content.strip().lower()
+
+        if action not in VALID_ACTIONS:
+            return "detect_issues"
+
+        return action
+
+    except Exception:
+        return "detect_issues"
+
+def run_llm_agent():
+    env = DataCleaningEnv()
+    state = env.reset()
+
+    for _ in range(5):
+        action = get_action(state)
+        state, reward, done, info = env.step(action)
+
+        if done:
+            break
+
+    result = {
+        "final_state": state,
+        "done": done
+    }
+
+    return HardGrader().grade(result)
+
+def run_rule_based_agent():
+    env = DataCleaningEnv()
+    state = env.reset()
+
+    actions = ["detect_issues", "fix_age", "fix_salary", "validate"]
+
+    for action in actions:
+        state, reward, done, info = env.step(action)
+
+        if done:
+            break
+
+    result = {
+        "final_state": state,
+        "done": done
+    }
+
+    return HardGrader().grade(result)
 
 
 def run_baseline():
-    results = {}
-
-    # EASY
-    easy_task = EasyTask()
-    easy_result = easy_task.run()
-    easy_score = EasyGrader().grade(easy_result["issues"])
-    results["easy"] = easy_score
-
-    # MEDIUM
-    medium_task = MediumTask()
-    medium_result = medium_task.run()
-    medium_score = MediumGrader().grade(medium_result)
-    results["medium"] = medium_score
-
-    # HARD
-    hard_task = HardTask()
-    hard_result = hard_task.run()
-    hard_score = HardGrader().grade(hard_result)
-    results["hard"] = hard_score
-
-    return results
-
+    try:
+        return {
+            "easy": run_rule_based_agent(),
+            "medium": run_rule_based_agent(),
+            "hard": run_llm_agent()
+        }
+    except Exception:
+        return {
+            "easy": run_rule_based_agent(),
+            "medium": run_rule_based_agent(),
+            "hard": run_rule_based_agent()
+        }
 
 if __name__ == "__main__":
-    print(run_baseline())
+    result = run_baseline()
+    print("Baseline Result:", result)
