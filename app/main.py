@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from graders.easy_grader import EasyGrader
 from graders.medium_grader import MediumGrader
 from graders.hard_grader import HardGrader
-
+from env.models import Action
 app = FastAPI()
 
 env = DataCleaningEnv()
@@ -23,13 +23,14 @@ def reset():
 
 @app.post("/step")
 def step(request: ActionRequest):
-    state, reward, done, info = env.step(request.action)
+    result = env.step(request)
+
     return {
-        "state": state,
-        "reward": reward,
-        "done": done,
-        "info": info
-    }
+    "state": result.observation.data,
+    "reward": result.reward,
+    "done": result.done,
+    "info": result.info
+}
 
 
 @app.get("/state")
@@ -41,7 +42,7 @@ def get_state():
 def get_tasks():
     return {
         "tasks": ["easy", "medium", "hard"],
-        "actions": ["detect_issues", "fix_age", "fix_salary", "validate"]
+        "actions": ["detect_issues", "fix_age", "fix_salary","fix_experience", "validate"]
     }
 
 

@@ -7,52 +7,87 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from env.environment import DataCleaningEnv
+from env.models import Action  # ✅ IMPORTANT
 from graders.hard_grader import HardGrader
 
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-VALID_ACTIONS = ["detect_issues", "fix_age", "fix_salary", "validate"]
+VALID_ACTIONS = ["detect_issues", "fix_age", "fix_salary", "fix_experience", "validate"]
 
 
-def get_action(state):
+# ---------------- ACTION SELECTION ----------------
+def get_action(state, history):
     prompt = f"""
 You are a data cleaning agent.
 
 Dataset:
 {state}
 
-Choose the BEST next action from:
-detect_issues, fix_age, fix_salary, validate
+Previous actions:
+{history}
 
-Return ONLY the action name.
+Goal:
+Fix ALL invalid values in ALL columns before validating.
+
+Available actions:
+- detect_issues
+- fix_age
+- fix_salary
+- fix_experience
+- validate
+
+Rules:
+- Do NOT repeat the same action unnecessarily
+- Do NOT call detect_issues more than once
+- Fix each column step-by-step
+- Only validate when everything is clean
+
+Return ONLY one action name.
 """
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0  
+            temperature=0
         )
 
         action = response.choices[0].message.content.strip().lower()
 
         if action not in VALID_ACTIONS:
-            return "detect_issues"
+            action = "detect_issues"
+
+        # prevent repeating same action
+        if len(history) > 0 and action == history[-1]:
+            for alt in VALID_ACTIONS:
+                if alt != action:
+                    return alt
 
         return action
 
     except Exception:
         return "detect_issues"
 
+
+# ---------------- LLM AGENT ----------------
 def run_llm_agent():
     env = DataCleaningEnv()
     state = env.reset()
+    history = []
 
-    for _ in range(5):
-        action = get_action(state)
-        state, reward, done, info = env.step(action)
+    for _ in range(7):
+        action = get_action(state, history)
+        history.append(action)
+
+        # ✅ USING TYPED MODEL
+        result = env.step(Action(action=action))
+
+        state = result.observation.data
+        reward = result.reward
+        done = result.done
+        info = result.info
 
         if done:
             break
@@ -64,14 +99,21 @@ def run_llm_agent():
 
     return HardGrader().grade(result)
 
+
+# ---------------- RULE BASED ----------------
 def run_rule_based_agent():
     env = DataCleaningEnv()
     state = env.reset()
 
-    actions = ["detect_issues", "fix_age", "fix_salary", "validate"]
+    actions = ["detect_issues", "fix_age", "fix_salary", "fix_experience", "validate"]
 
     for action in actions:
-        state, reward, done, info = env.step(action)
+        result = env.step(Action(action=action))  # ✅ FIXED
+
+        state = result.observation.data
+        reward = result.reward
+        done = result.done
+        info = result.info
 
         if done:
             break
@@ -84,6 +126,7 @@ def run_rule_based_agent():
     return HardGrader().grade(result)
 
 
+# ---------------- BASELINE ----------------
 def run_baseline():
     try:
         return {
@@ -98,6 +141,8 @@ def run_baseline():
             "hard": run_rule_based_agent()
         }
 
+
+# ---------------- MAIN ----------------
 if __name__ == "__main__":
     result = run_baseline()
     print("Baseline Result:", result)

@@ -1,27 +1,32 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from env.environment import DataCleaningEnv
+from env.models import Action
 
 env = DataCleaningEnv()
 
-state = env.reset()
-print("Initial State:", state)
+print("Initial State:", env.reset())
 
 print("\n--- Detecting Issues ---")
-state, reward, done, info = env.step("detect_issues")
-print("Issues:", info.get("issues"))
-print("Reward:", reward)
+result = env.step(Action(action="detect_issues"))
+print("Issues:", result.info["issues"])
+print("Reward:", result.reward)
 
 print("\n--- Fix Age ---")
-state, reward, done, _ = env.step("fix_age")
-print("Reward:", reward)
+result = env.step(Action(action="fix_age"))
+print("Reward:", result.reward)
 
 print("\n--- Fix Salary ---")
-state, reward, done, _ = env.step("fix_salary")
-print("Reward:", reward)
+result = env.step(Action(action="fix_salary"))
+print("Reward:", result.reward)
+
+print("\n--- Fix Experience ---")
+result = env.step(Action(action="fix_experience"))
+print("Reward:", result.reward)
 
 print("\n--- Validate ---")
-state, reward, done, _ = env.step("validate")
-print("Final Reward:", reward)
-print("Done:", done)
+result = env.step(Action(action="validate"))
+print("Final Reward:", result.reward)
+print("Done:", result.done)
