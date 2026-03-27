@@ -4,8 +4,8 @@ class DataCleaningEnv:
 
     def reset(self):
         self.data = {
-            "age": [25, -5, None],
-            "salary": [50000, None, 70000]
+            "age": [25, -5, None, 200],
+            "salary": [50000, None, -1000, 70000]
         }
         return self.data
 
@@ -28,6 +28,7 @@ class DataCleaningEnv:
     def step(self, action):
         if self.data is None:
             self.reset()
+
         old_quality = self.calculate_quality()
         info = {}
 
@@ -46,11 +47,33 @@ class DataCleaningEnv:
             reward = 0.1 if issues else -0.1
 
         elif action == "fix_age":
-            self.data["age"] = [25, 25, 25]
+            valid_ages = [x for x in self.data["age"] if x is not None and 0 <= x <= 120]
+
+            if valid_ages:
+                median = sorted(valid_ages)[len(valid_ages)//2]
+            else:
+                median = 25
+
+            self.data["age"] = [
+                median if (x is None or x < 0 or x > 120) else x
+                for x in self.data["age"]
+            ]
+
             reward = 0
 
         elif action == "fix_salary":
-            self.data["salary"] = [50000, 60000, 70000]
+            valid_salaries = [x for x in self.data["salary"] if x is not None and x >= 0]
+
+            if valid_salaries:
+                mean = sum(valid_salaries) / len(valid_salaries)
+            else:
+                mean = 50000
+
+            self.data["salary"] = [
+                int(mean) if (x is None or x < 0) else x
+                for x in self.data["salary"]
+            ]
+
             reward = 0
 
         elif action == "validate":
@@ -61,6 +84,9 @@ class DataCleaningEnv:
 
         new_quality = self.calculate_quality()
         reward += (new_quality - old_quality)
+
+        if action in ["fix_age", "fix_salary"] and new_quality == old_quality:
+            reward -= 0.1
 
         done = new_quality > 0.95
 

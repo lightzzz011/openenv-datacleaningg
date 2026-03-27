@@ -20,7 +20,9 @@ class HardGrader:
 
         quality = self.calculate_quality(data)
 
-        if not result["done"]:
-            quality *= 0.8
+    # bonus for finishing
+        if result["done"]:
+            quality += 0.05
 
-        return quality
+    # cap at 1.0
+        return min(quality, 1.0)
