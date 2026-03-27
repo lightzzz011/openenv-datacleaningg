@@ -1,0 +1,30 @@
+name: data-cleaning-env
+description: AI environment for autonomous data cleaning and repair
+version: 1.0
+
+entrypoint: app.main:app
+
+tasks:
+  - name: easy
+    description: Detect data issues
+  - name: medium
+    description: Fix data inconsistencies
+  - name: hard
+    description: Fully clean dataset
+
+actions:
+  - detect_issues
+  - fix_age
+  - fix_salary
+  - validate
+
+observation_space:
+  type: object
+  description: Dataset with columns age and salary
+
+reward:
+  type: float
+  range: [0.0, 1.0]
+
+metadata:
+  author: Sai, VijayaLakshmi, Sujitha

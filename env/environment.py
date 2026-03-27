@@ -25,7 +25,9 @@ class DataCleaningEnv:
 
         return 1 - (issues / total)
 
-    def step(self, action):   
+    def step(self, action):
+        if self.data is None:
+            self.reset()
         old_quality = self.calculate_quality()
         info = {}
 
