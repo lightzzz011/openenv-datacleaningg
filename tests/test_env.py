@@ -8,10 +8,20 @@ env = DataCleaningEnv()
 state = env.reset()
 print("Initial State:", state)
 
-print("Initial Quality:", env.calculate_quality())
-
-state, reward, done, _ = env.step("fix_age")
-
-print("After Step:", state)
-print("New Quality:", env.calculate_quality())
+print("\n--- Detecting Issues ---")
+state, reward, done, info = env.step("detect_issues")
+print("Issues:", info.get("issues"))
 print("Reward:", reward)
+
+print("\n--- Fix Age ---")
+state, reward, done, _ = env.step("fix_age")
+print("Reward:", reward)
+
+print("\n--- Fix Salary ---")
+state, reward, done, _ = env.step("fix_salary")
+print("Reward:", reward)
+
+print("\n--- Validate ---")
+state, reward, done, _ = env.step("validate")
+print("Final Reward:", reward)
+print("Done:", done)
